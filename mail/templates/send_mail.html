@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Send Email</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div style="margin-left:100px; margin-right:100px; margin-top:30px;" class="text-center">
+      <div class="card">
+        <h5 class="card-header info-color white-text text-center">
+          <strong>Compose Email</strong>
+        </h5>
+        <div class="card-body px-lg-5 pt-0">
+          <form class="text-center" style="color: #757575;" onsubmit='return onSubmit(this);'>
+            <div class="md-form mt-3">
+                <input type="text" id="receivers" name="receivers" class="form-control">
+                <label for="receivers">To</label>
+            </div>
+            <!--<div class="chips chips-placeholder"></div>-->
+            <div class="md-form">
+                <input type="text" id="cc" name="cc" class="form-control">
+                <label for="cc">Cc</label>
+            </div>
+            <div class="md-form">
+                <input type="text" id="bcc" name="bcc" class="form-control">
+                <label for="bcc">Bcc</label>
+            </div>
+             <div class="md-form mt-3">
+                <input type="text" id="subject" name="subject" class="form-control">
+                <label for="subject">Subject</label>
+            </div>
+            <div class="md-form">
+                <textarea id="message" name="message" class="form-control md-textarea" rows="3"></textarea>
+                <label for="message">Message</label>
+            </div>
+            <button class="btn btn-outline-info btn-rounded btn-block z-depth-0 my-4 waves-effect" type="submit">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        /*$('.chips-placeholder').materialChip({
+          placeholder: 'Enter a tag',
+          secondaryPlaceholder: '+Tag',
+        });*/
+      });
+
+      function onSubmit( form ){
+        var dataset = $(form).serializeArray();
+        var data_to_post = {};
+        for(s in dataset){
+            data_to_post[dataset[s]['name']] = dataset[s]['value'];
+        }
+        data_to_post = JSON.stringify(data_to_post);
+        try{
+          $.ajax({
+              type: 'POST',
+              url: '/v1/mail/',
+              data: data_to_post,
+              headers: {'X-CSRFToken': '{{csrf_token}}' },
+              success: function(data) {
+                alert('Email sent!');
+              },
+              contentType: "application/json",
+              dataType: 'json'
+          });
+        }catch(err){
+          console.log(err);
+        };
+        return false;
+      }
+
+    </script>
+  </body>
+</html>

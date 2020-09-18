@@ -13,17 +13,21 @@ class MailViewset(viewsets.ReadOnlyModelViewSet):
 
     def create(self, request, format=None):
         mail_data = request.data
-        print(mail_data)
         try:
-            receivers = mail_data['receivers']
-            cc = mail_data['cc']
-            bcc = mail_data['bcc']
+            receivers_list = list(set(mail_data['receivers'].split(',')))
+            cc_list = list(set(mail_data['cc'].split(',')))
+            bcc_list = list(set(mail_data['bcc'].split(',')))
             subject = mail_data['subject']
             message = mail_data['message']
-            send_email(subject, message, receivers.split(','),
-                       cc=cc.split(','), bcc=bcc.split(','))
+            if len(receivers_list) == 0 or subject == "" or message == "":
+                return Response({'response': "failed"},
+                                status=status.HTTP_400_BAD_REQUEST)
+            send_email(subject, message, receivers_list,
+                       cc=cc_list, bcc=bcc_list)
             # Save the email values
-            Mail(receivers=receivers, cc=cc, bcc=bcc, subject=subject,
+            Mail(receivers=','.join(receivers_list),
+                 cc=','.join(cc_list), bcc=','.join(bcc_list),
+                 subject=subject,
                  message=message).save()
             return Response(
                 {"response": "success"},

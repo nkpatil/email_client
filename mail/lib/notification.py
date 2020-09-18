@@ -8,4 +8,5 @@ def send_email(subject, body, recievers, cc=[], bcc=[]):
         msg.cc = cc
     if len(bcc) > 0:
         msg.bcc = bcc
+    msg.content_subtype = "html"
     msg.send()

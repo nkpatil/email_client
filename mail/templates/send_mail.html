@@ -1,13 +1,34 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Send Email</title>
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+    <link href="{% static 'css/tag_editor.css' %}" rel="stylesheet">
+    <style type="text/css">
+      .btn-file {
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-file input[type=file] {
+        position: absolute;
+        top: 0;
+        right: 0;
+        min-width: 100%;
+        min-height: 100%;
+        font-size: 100px;
+        text-align: right;
+        filter: alpha(opacity=0);
+        opacity: 0;
+        outline: none;
+        background: white;
+        cursor: inherit;
+        display: block;
+      }
+    </style>
   </head>
   <body>
     <div style="margin-left:100px; margin-right:100px; margin-top:30px;" class="text-center">
@@ -16,42 +37,73 @@
           <strong>Compose Email</strong>
         </h5>
         <div class="card-body px-lg-5 pt-0">
-          <form class="text-center" style="color: #757575;" onsubmit='return onSubmit(this);'>
-            <div class="md-form mt-3">
-                <input type="text" id="receivers" name="receivers" class="form-control">
-                <label for="receivers">To</label>
+          <form class="text-center" style="color: #757575;" id="form_mail" onsubmit='return onSubmit(this);'>
+            <div class="row">
+              <div class="col-10">
+                <div class="md-form">
+                    <textarea class="form-control md-textarea chips" id="receivers" name="receivers" placeholder="To"></textarea>
+                    <label for="receivers">To <span style="color:red;">*</span></label>
+                </div>
+              </div>
+              <div class="col-2" align="right">
+                <span class="btn btn-primary btn-file btn-sm">
+                    Import CSV<input type="file" id="csv">
+                </span>
+              </div>
             </div>
-            <!--<div class="chips chips-placeholder"></div>-->
             <div class="md-form">
-                <input type="text" id="cc" name="cc" class="form-control">
+                <textarea class="form-control md-textarea chips" id="cc" name="cc" placeholder="Cc"></textarea>
                 <label for="cc">Cc</label>
             </div>
             <div class="md-form">
-                <input type="text" id="bcc" name="bcc" class="form-control">
+                <textarea class="form-control md-textarea chips" id="bcc" name="bcc" placeholder="Bcc"></textarea>
                 <label for="bcc">Bcc</label>
             </div>
              <div class="md-form mt-3">
-                <input type="text" id="subject" name="subject" class="form-control">
-                <label for="subject">Subject</label>
+                <input type="text" id="subject" name="subject" class="form-control" required>
+                <label for="subject">Subject <span style="color:red;">*</span></label>
             </div>
             <div class="md-form">
-                <textarea id="message" name="message" class="form-control md-textarea" rows="3"></textarea>
-                <label for="message">Message</label>
+                <textarea id="message" name="message" class="form-control md-textarea" rows="3" required></textarea>
+                <label for="message">Message <span style="color:red;">*</span></label>
             </div>
-            <button class="btn btn-outline-info btn-rounded btn-block z-depth-0 my-4 waves-effect" type="submit">Send</button>
+            <button class="btn btn-outline-info btn-rounded btn-block z-depth-0 my-4 waves-effect" type="submit" id="btn_send">Send Mail</button>
           </form>
         </div>
       </div>
     </div>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="{% static 'js/jquery-1.11.1.min.js' %}"></script>
+    <script src="{% static 'js/jquery-ui.min.js' %}"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js"></script>
+    <script src="{% static 'js/caret.min.js' %}"></script>
+    <script src="{% static 'js/tag_editor.js' %}"></script>
     <script type="text/javascript">
+      var cache = {};
+      function googleSuggest(request, response) {
+          var term = request.term;
+          if (term in cache) { response(cache[term]); return; }
+          $.ajax({
+              url: 'https://query.yahooapis.com/v1/public/yql',
+              dataType: 'JSONP',
+              data: { format: 'json', q: 'select * from xml where url="http://google.com/complete/search?output=toolbar&q='+term+'"' },
+              success: function(data) {
+                  var suggestions = [];
+                  try { var results = data.query.results.toplevel.CompleteSuggestion; } catch(e) { var results = []; }
+                  $.each(results, function() {
+                      try {
+                          var s = this.suggestion.data.toLowerCase();
+                          suggestions.push({label: s.replace(term, '<b>'+term+'</b>'), value: s});
+                      } catch(e){}
+                  });
+                  cache[term] = suggestions;
+                  response(suggestions);
+              }
+          });
+      }
+
       $(document).ready(function() {
-        /*$('.chips-placeholder').materialChip({
-          placeholder: 'Enter a tag',
-          secondaryPlaceholder: '+Tag',
-        });*/
+        $('.chips').tagEditor();
       });
 
       function onSubmit( form ){
@@ -61,23 +113,64 @@
             data_to_post[dataset[s]['name']] = dataset[s]['value'];
         }
         data_to_post = JSON.stringify(data_to_post);
+        var btn_send = $("#btn_send");
+        btn_send.html('Sending...');
+        btn_send.prop('disabled', true);
         try{
           $.ajax({
               type: 'POST',
               url: '/v1/mail/',
               data: data_to_post,
+              contentType: "application/json",
+              dataType: 'json',
               headers: {'X-CSRFToken': '{{csrf_token}}' },
               success: function(data) {
+                btn_send.html('Send Mail');
+                btn_send.prop('disabled', false);
                 alert('Email sent!');
               },
-              contentType: "application/json",
-              dataType: 'json'
+              error: function(err){
+                alert("Failed sending email!");
+                btn_send.html('Send Mail');
+                btn_send.prop('disabled', false);
+              }
           });
         }catch(err){
           console.log(err);
         };
         return false;
       }
+
+      $("#csv").change(function(e) {
+        var ext = $("input#csv").val().split(".").pop().toLowerCase();
+        if($.inArray(ext, ["csv"]) == -1) {
+          alert('Only csv allowed!');
+          return false;
+        }
+
+        if (e.target.files != undefined) {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+              var email_id_list = [];
+              var lines = e.target.result.split('\n');
+              for (i = 0; i < lines.length; ++i)
+              {
+                  if(!email_id_list.includes(lines[i])){
+                    split_line = lines[i].split(',');
+                    for(j=0; j<split_line.length; ++j){
+                      if(split_line[j] != "")
+                        email_id_list.push(split_line[j]);
+                    }
+                  }
+              }
+              $("#receivers").tagEditor('destroy');
+              $("#receivers").html(email_id_list.toString());
+              $('#receivers').tagEditor({initialTags: email_id_list});
+          };
+          reader.readAsText(e.target.files.item(0));
+        }
+        return false;
+      });
 
     </script>
   </body>
